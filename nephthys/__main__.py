@@ -17,6 +17,7 @@ from nephthys.utils.logging import parse_level_name
 from nephthys.utils.logging import send_heartbeat
 from nephthys.utils.logging import setup_otel_logging
 
+print("[nephthys] Module loaded, initializing...", flush=True)
 load_dotenv()
 
 try:
@@ -37,10 +38,13 @@ if env.otel_logs_url:
 
 @contextlib.asynccontextmanager
 async def main(_app: Starlette):
+    print("[nephthys] Lifespan starting...", flush=True)
     await send_heartbeat(":neodog_nom_verified: Bot is online!")
+    print("[nephthys] Heartbeat sent", flush=True)
     async with ClientSession() as session:
         env.session = session
         await env.db.connect()
+        print(f"[nephthys] DB connected: {env.db.is_connected()}", flush=True)
 
         scheduler = AsyncIOScheduler(timezone="Europe/London")
         if env.daily_summary:
@@ -87,7 +91,11 @@ async def main(_app: Starlette):
             logging.info("Starting Socket Mode handler")
             await handler.connect_async()
 
-        logging.info(f"Starting Uvicorn on port {env.port}")
+        print(f"[nephthys] Slack app token present: {bool(env.slack_app_token)}", flush=True)
+        print(f"[nephthys] Help channel: {env.slack_help_channel}", flush=True)
+        print(f"[nephthys] Ticket channel: {env.slack_ticket_channel}", flush=True)
+        print(f"[nephthys] Program: {env.program}", flush=True)
+        print(f"[nephthys] Lifespan ready, yielding to Uvicorn on port {env.port}", flush=True)
 
         yield
         scheduler.shutdown()
@@ -99,14 +107,27 @@ async def main(_app: Starlette):
 
 
 def start():
-    uvicorn.run(
-        "nephthys.utils.starlette:app",
-        host="0.0.0.0",
-        port=env.port,
-        log_level="info" if env.environment != "production" else "warning",
-        reload=env.environment == "development",
-    )
+    try:
+        print(f"[nephthys] Starting on port {env.port}, environment={env.environment}", flush=True)
+        uvicorn.run(
+            "nephthys.utils.starlette:app",
+            host="0.0.0.0",
+            port=env.port,
+            log_level="info" if env.environment != "production" else "warning",
+            reload=env.environment == "development",
+        )
+    except Exception as e:
+        print(f"[nephthys] Fatal error during startup: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":
-    start()
+    try:
+        start()
+    except Exception as e:
+        print(f"[nephthys] Fatal error during startup: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise

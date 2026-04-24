@@ -27,7 +27,10 @@ req_handler = AsyncSlackRequestHandler(slack_app)
 
 
 async def endpoint(req: Request):
-    return await req_handler.handle(req)
+    print(f"[nephthys] Incoming Slack event request: {req.method} {req.url.path}", flush=True)
+    response = await req_handler.handle(req)
+    print(f"[nephthys] Slack event response: {response.status_code}", flush=True)
+    return response
 
 
 async def health(req: Request):

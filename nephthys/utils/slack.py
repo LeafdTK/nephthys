@@ -32,6 +32,7 @@ app = AsyncApp(token=env.slack_bot_token, signing_secret=env.slack_signing_secre
 
 @app.event("message")
 async def handle_message(event: Dict[str, Any], client: AsyncWebClient):
+    print(f"[nephthys] Message event received in channel {event.get('channel')}, subtype={event.get('subtype')}", flush=True)
     logging.debug(f"Message event: {event}")
     is_message_deletion = (
         event.get("subtype") == "message_changed"
@@ -39,11 +40,15 @@ async def handle_message(event: Dict[str, Any], client: AsyncWebClient):
     ) or event.get("subtype") == "message_deleted"
 
     if event["channel"] == env.slack_help_channel:
+        print(f"[nephthys] Message matches help channel, processing...", flush=True)
         async with perf_timer("Processing message event (total time)"):
             if is_message_deletion:
                 await on_message_deletion(event, client)
             else:
                 await on_message(event, client)
+        print(f"[nephthys] Message processing complete", flush=True)
+    else:
+        print(f"[nephthys] Message ignored: channel {event.get('channel')} != help channel {env.slack_help_channel}", flush=True)
 
 
 @app.action("mark_resolved")
